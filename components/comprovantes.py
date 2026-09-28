@@ -37,21 +37,33 @@ def _comprovantes_da_sessao() -> dict[int, dict[str, Any]]:
     return st.session_state.setdefault("comprovantes_sessao", {})
 
 
-def comprovantes_registrados() -> dict[int, dict[str, Any]]:
+def comprovantes_registrados(
+    cpf: str | None = None,
+    incluir_sessao: bool = True,
+) -> dict[int, dict[str, Any]]:
     """Consolida os comprovantes registrados (banco de dados + sessão).
 
     Quando a integração com o banco está ativa, os registros persistidos têm
     precedência; os registros apenas em sessão são usados como complemento
     (ex.: banco indisponível ou persistência desativada).
+
+    Args:
+        cpf: CPF a consultar; sem argumento, usa o CPF da sessão. Um CPF
+            **explícito** sempre consulta o banco (uso do painel admin),
+            independentemente de ``PERSIST_TO_DB``.
+        incluir_sessao: se False, ignora os comprovantes mantidos apenas em
+            sessão (o painel admin consulta somente dados persistidos).
     """
     consolidado: dict[int, dict[str, Any]] = {}
 
     # 1. Registros apenas em sessão
-    consolidado.update(_comprovantes_da_sessao())
+    if incluir_sessao:
+        consolidado.update(_comprovantes_da_sessao())
 
     # 2. Registros persistidos no banco (precedência)
-    cpf = st.session_state.get("cpf_usuario")
-    if cpf and settings.PERSIST_TO_DB:
+    cpf_explicito = cpf is not None
+    cpf = cpf or st.session_state.get("cpf_usuario")
+    if cpf and (cpf_explicito or settings.PERSIST_TO_DB):
         try:
             from database.db import buscar_documentos_cpf
 
