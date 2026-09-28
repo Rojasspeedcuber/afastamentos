@@ -16,74 +16,17 @@ Estado de sessão gravado:
 """
 from __future__ import annotations
 
-import re
 import logging
 
 import streamlit as st
 
 from config.settings import settings
+from utils.cpf import cpf_valido, formatar_cpf, mascara_cpf_parcial
 
 logger = logging.getLogger(__name__)
 
 # Cor institucional (azul escuro TRE-PE)
 COR_PRIMARIA = "#1e3a8a"
-
-
-# ---------------------------------------------------------------------------
-# Validação de CPF
-# ---------------------------------------------------------------------------
-def _cpf_digitos_validos(cpf: str) -> bool:
-    """Valida um CPF (11 dígitos) pelos dígitos verificadores oficiais.
-
-    Mesmo algoritmo utilizado em ``services/extraction_service.py``.
-    """
-    if len(cpf) != 11 or cpf == cpf[0] * 11:
-        return False
-    for i in range(9, 11):
-        soma = sum(int(cpf[num]) * ((i + 1) - num) for num in range(0, i))
-        digito = ((soma * 10) % 11) % 10
-        if digito != int(cpf[i]):
-            return False
-    return True
-
-
-def _cpf_valido(cpf_raw: str | None) -> str | None:
-    """Retorna os 11 dígitos do CPF se for válido; caso contrário, None.
-
-    Args:
-        cpf_raw: CPF em qualquer formato (ex.: '123.456.789-00').
-
-    Returns:
-        str | None: CPF com apenas dígitos (11 posições) e válido, ou None.
-    """
-    if not cpf_raw:
-        return None
-    digitos = re.sub(r"\D", "", str(cpf_raw))
-    if len(digitos) != 11:
-        return None
-    if not _cpf_digitos_validos(digitos):
-        return None
-    return digitos
-
-
-def _formatar_cpf(cpf_digitos: str) -> str:
-    """Formata 11 dígitos como 000.000.000-00."""
-    d = re.sub(r"\D", "", cpf_digitos or "")
-    if len(d) != 11:
-        return cpf_digitos
-    return f"{d[0:3]}.{d[3:6]}.{d[6:9]}-{d[9:11]}"
-
-
-def _mascara_cpf_parcial(valor: str) -> str:
-    """Aplica máscara progressiva de CPF (000.000.000-00) durante a digitação."""
-    d = re.sub(r"\D", "", valor or "")[:11]
-    if len(d) <= 3:
-        return d
-    if len(d) <= 6:
-        return f"{d[0:3]}.{d[3:]}"
-    if len(d) <= 9:
-        return f"{d[0:3]}.{d[3:6]}.{d[6:]}"
-    return f"{d[0:3]}.{d[3:6]}.{d[6:9]}-{d[9:]}"
 
 
 # ---------------------------------------------------------------------------
@@ -120,7 +63,7 @@ def _render_cabecalho_login(subtitulo_modo: str = "") -> None:
 def _persistir_sessao(cpf_digitos: str) -> None:
     """Grava o CPF autenticado no session_state."""
     st.session_state["cpf_usuario"] = cpf_digitos
-    st.session_state["cpf_usuario_fmt"] = _formatar_cpf(cpf_digitos)
+    st.session_state["cpf_usuario_fmt"] = formatar_cpf(cpf_digitos)
     st.session_state["autenticado"] = True
     logger.info("Usuário autenticado com CPF %s.", cpf_digitos)
 
@@ -152,12 +95,12 @@ def _render_form_cpf(titulo: str, ajuda: str = "") -> bool:
         enviar = st.form_submit_button("Entrar", type="primary", use_container_width=True)
 
     # Aplica máscara em tempo real para exibição na próxima renderização
-    mascarado = _mascara_cpf_parcial(cpf_input)
+    mascarado = mascara_cpf_parcial(cpf_input)
     if mascarado != st.session_state.get("_cpf_input_raw"):
         st.session_state["_cpf_input_raw"] = mascarado
 
     if enviar:
-        cpf_digitos = _cpf_valido(cpf_input)
+        cpf_digitos = cpf_valido(cpf_input)
         if cpf_digitos is None:
             st.markdown(
                 "<div style='color:#dc2626; font-weight:600; margin-top:8px;'>"
@@ -207,7 +150,7 @@ def _login_keycloak() -> bool:
         or user_info.get("preferred_username")
         or user_info.get("username")
     )
-    cpf_digitos = _cpf_valido(cpf_token)
+    cpf_digitos = cpf_valido(cpf_token)
     if cpf_digitos:
         _persistir_sessao(cpf_digitos)
         st.rerun()

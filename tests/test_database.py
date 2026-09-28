@@ -124,12 +124,12 @@ def test_persistir_extracao_fallback_cpf_usuario(monkeypatch):
 
 
 def test_auth_cpf_valido():
-    from components import auth
-    assert auth._cpf_valido("111.444.777-35") == "11144477735"
-    assert auth._cpf_valido("111.111.111-11") is None  # dígitos repetidos
-    assert auth._cpf_valido("123") is None
-    assert auth._cpf_valido(None) is None
-    assert auth._formatar_cpf("11144477735") == "111.444.777-35"
+    from utils.cpf import cpf_valido, formatar_cpf
+    assert cpf_valido("111.444.777-35") == "11144477735"
+    assert cpf_valido("111.111.111-11") is None  # dígitos repetidos
+    assert cpf_valido("123") is None
+    assert cpf_valido(None) is None
+    assert formatar_cpf("11144477735") == "111.444.777-35"
 
 
 # ---------------------------------------------------------------------------
