@@ -266,15 +266,23 @@ def _fmt_data(valor: Any) -> str:
         return str(valor)
 
 
-def render_registros_usuario() -> None:
-    """Renderiza a seção "📋 Seus Registros no Banco" para o CPF logado."""
-    cpf = st.session_state.get("cpf_usuario")
-    cpf_fmt = st.session_state.get("cpf_usuario_fmt")
+def render_registros_usuario(
+    cpf: str | None = None,
+    cpf_fmt: str | None = None,
+    titulo: str = "📋 Seus Registros no Banco",
+) -> None:
+    """Renderiza instrumentos + comparecimentos de um CPF.
+
+    Sem argumentos, usa o CPF da sessão (visão do convocado). O painel
+    administrativo passa o CPF consultado explicitamente.
+    """
+    cpf = cpf or st.session_state.get("cpf_usuario")
+    cpf_fmt = cpf_fmt or st.session_state.get("cpf_usuario_fmt") or cpf
     if not cpf:
         return
 
     st.divider()
-    st.markdown("### 📋 Seus Registros no Banco")
+    st.markdown(f"### {titulo}")
 
     # Badge azul com o CPF formatado
     st.markdown(
