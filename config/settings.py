@@ -45,6 +45,15 @@ class Settings:
     KEYCLOAK_REALM: str = os.getenv("KEYCLOAK_REALM", "")
     KEYCLOAK_CLIENT_ID: str = os.getenv("KEYCLOAK_CLIENT_ID", "")
 
+    # --- RBAC (controle de acesso por papéis) ---
+    # Nomes das roles esperadas no token do Keycloak (realm roles ou client roles).
+    KEYCLOAK_ROLE_ADMIN: str = os.getenv("KEYCLOAK_ROLE_ADMIN", "admin")
+    KEYCLOAK_ROLE_CONVOCADO: str = os.getenv("KEYCLOAK_ROLE_CONVOCADO", "convocado")
+
+    # Modo desenvolvimento (quando KEYCLOAK_URL está vazio): roles simuladas no
+    # login por CPF, separadas por vírgula (ex.: "admin,convocado").
+    DEV_ROLES: str = os.getenv("DEV_ROLES", "convocado")
+
 settings = Settings()
 
 # Garante que os diretórios de armazenamento existam
