@@ -29,11 +29,14 @@ O projeto segue estrita separação de responsabilidades em camadas desacopladas
 │   └── settings.py
 ├── components/                 # Componentes visuais do Streamlit
 │   ├── __init__.py
+│   ├── auth.py                 # Autenticação (Keycloak OIDC / CPF) e telas de acesso
+│   ├── painel_admin.py         # Painel administrativo (role admin, somente consulta)
 │   ├── upload.py               # Zona de Upload e Preview do Arquivo
 │   ├── processing.py           # Indicador visual das etapas
 │   └── results.py              # Renderizador polimórfico de resultados
 ├── services/                   # Camada de lógica de negócio e processamento
 │   ├── __init__.py
+│   ├── authorization_service.py # RBAC: extração de roles e decisão de acesso
 │   ├── pdf_service.py          # Leitura e parsing de baixo nível com pypdf
 │   ├── extraction_service.py   # Estratégias de extração extensíveis (BaseExtractor)
 │   └── processing_service.py   # Orquestrador do fluxo completo
@@ -48,6 +51,7 @@ O projeto segue estrita separação de responsabilidades em camadas desacopladas
 ├── ingest_pdfs.py              # CLI para extrair PDFs e gravar no banco (lote)
 ├── utils/                      # Funções utilitárias
 │   ├── __init__.py
+│   ├── cpf.py                  # Validação, formatação e máscara de CPF
 │   └── file_validation.py      # Validação de formato, MIME, tamanho e integridade
 ├── mocks/                      # Mocks para validação rápida da interface
 │   ├── __init__.py
@@ -56,6 +60,8 @@ O projeto segue estrita separação de responsabilidades em camadas desacopladas
 │   └── temp/
 ├── tests/                      # Suíte de testes automatizados com pytest
 │   ├── __init__.py
+│   ├── test_authorization_service.py
+│   ├── test_cpf_utils.py
 │   ├── test_file_validation.py
 │   └── test_extraction_service.py
 ├── requirements.txt            # Dependências Python do projeto
@@ -113,6 +119,67 @@ streamlit run app.py
 ```
 
 Acesse no navegador: `http://localhost:8501` (ou `http://localhost:3000` conforme a configuração da variável `PORT`).
+
+---
+
+## 🔐 Autenticação e Controle de Acesso (Keycloak)
+
+O sistema suporta dois modos de autenticação, definidos pela variável `KEYCLOAK_URL`:
+
+| Modo | Quando | Comportamento |
+|------|--------|---------------|
+| **Keycloak (produção)** | `KEYCLOAK_URL` preenchida | Login OIDC: o usuário informa **CPF (username) + senha** na página do Keycloak, com recuperação de senha por e-mail ("Esqueceu a senha?") |
+| **CPF direto (desenvolvimento)** | `KEYCLOAK_URL` vazia | Qualquer CPF válido entra; as roles vêm de `DEV_ROLES` |
+
+### Papéis (RBAC)
+
+| Role | Visão | Permissões |
+|------|-------|------------|
+| `convocado` | Fluxo unificado | Upload da carta convocatória e dos comprovantes; consulta **apenas dos próprios registros** |
+| `admin` | Painel Administrativo | Consulta **somente leitura** de qualquer CPF (instrumentos, comparecimentos, comprovantes e dias ganhos) |
+| ambas | Seletor na barra lateral | Alterna entre as duas visões |
+| nenhuma | — | 🚫 Tela de **acesso negado** |
+
+Os nomes das roles são configuráveis (`KEYCLOAK_ROLE_ADMIN`, `KEYCLOAK_ROLE_CONVOCADO`).
+O código aceita **realm roles** e **client roles** (união das duas).
+
+### Variáveis de ambiente
+
+```dotenv
+KEYCLOAK_URL=https://auth.exemplo.com.br
+KEYCLOAK_REALM=tre-pe
+KEYCLOAK_CLIENT_ID=convocacoes-app
+KEYCLOAK_ROLE_ADMIN=admin
+KEYCLOAK_ROLE_CONVOCADO=convocado
+DEV_ROLES=convocado   # usado apenas com KEYCLOAK_URL vazia
+```
+
+### Configuração necessária no servidor Keycloak
+
+1. **Client** (ex.: `convocacoes-app`): tipo *public*, Standard Flow (Authorization
+   Code) habilitado; em *Valid redirect URIs* e *Web origins*, incluir o host do
+   app (ex.: `https://app.tre-pe.jus.br/*`; em desenvolvimento, `http://localhost:8501/*`).
+2. **Usuários:** o campo `username` deve ser o **CPF (11 dígitos)** — o app lê a
+   claim `preferred_username`. Preencher também **e-mail** (obrigatório para a
+   recuperação de senha) e nome completo.
+3. **Roles:** criar `convocado` e `admin` (recomendado: *client roles* do
+   `convocacoes-app`) e atribuí-las aos usuários. Usuário autenticado **sem**
+   nenhuma das duas roles vê a tela de acesso negado.
+4. **Recuperação de senha por e-mail:** em *Realm → Authentication*, habilitar o
+   fluxo **"Forgot password"** (Reset credentials); em *Realm → Email*, configurar
+   o SMTP. O link "Esqueceu a senha?" aparece automaticamente na página de login.
+5. **Mensagem de credencial inválida (pt-BR):** em *Realm → Localization* (pt-BR),
+   sobrescrever a chave `invalidUsernameOrPasswordMessage` com
+   **"Usuário ou senha não encontrados"**.
+6. **Opcional:** tema personalizado com a identidade visual do TRE-PE e
+   *Valid post logout redirect URIs* no client (se desejar retorno ao app após o
+   logout).
+
+### Logout e SSO
+
+O botão **Sair** encerra a sessão local do app. Como o Keycloak mantém a sessão
+SSO no navegador, a tela seguinte oferece o link **"Encerrar sessão no Keycloak"**
+(end-session) — necessário para **trocar de usuário** no mesmo navegador.
 
 ---
 
