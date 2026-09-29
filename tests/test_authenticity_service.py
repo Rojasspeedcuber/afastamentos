@@ -41,6 +41,11 @@ PDF_EXEMPLO = os.path.join(
     os.path.dirname(__file__), "..", "Cleodon Inácio dos Santos Filho.pdf"
 )
 
+URL_SEI_TRE_PE = (
+    "https://seiexterno.tre-pe.jus.br/sei/controlador_externo.php?"
+    "acao=documento_conferir&id_orgao_acesso_externo=0"
+)
+
 
 def test_extrai_assinatura_textual_padrao_sei():
     assinatura = extrair_assinatura_textual(TEXTO_SEI_VALIDO)
@@ -55,9 +60,21 @@ def test_extrai_codigos_de_autenticidade():
     codigos = extrair_codigos_autenticidade(TEXTO_SEI_VALIDO)
     assert codigos["codigo_verificador"] == "3443939"
     assert codigos["codigo_crc"] == "BCE2B28E"
-    assert "controlador_externo" in (codigos["url_conferencia"] or "")
-    # A URL deve ser reconstruída mesmo com quebra de linha no meio
-    assert " " not in codigos["url_conferencia"]
+    assert codigos["url_conferencia"] == URL_SEI_TRE_PE
+
+
+def test_usa_formulario_oficial_quando_texto_sei_tem_codigos_sem_url():
+    codigos = extrair_codigos_autenticidade(TEXTO_SEM_ASSINATURA)
+    assert codigos["url_conferencia"] == URL_SEI_TRE_PE
+
+
+def test_nao_aceita_url_de_conferencia_de_outro_dominio():
+    texto = (
+        TEXTO_SEM_ASSINATURA
+        + " https://exemplo.invalid/controlador_externo.php?acao=documento_conferir"
+    )
+    codigos = extrair_codigos_autenticidade(texto)
+    assert codigos["url_conferencia"] == URL_SEI_TRE_PE
 
 
 def test_documento_valido_com_assinatura_e_codigos():

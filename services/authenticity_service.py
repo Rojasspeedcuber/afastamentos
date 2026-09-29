@@ -40,9 +40,11 @@ RE_ASSINATURA = re.compile(
     re.IGNORECASE,
 )
 
-# URL oficial de conferência externa do SEI (pode conter quebras no meio)
-RE_URL_CONFERENCIA = re.compile(
-    r"(https?://\S*controlador_externo\S*(?:\s+\S+=\S+)*)", re.IGNORECASE
+# Formulário oficial para conferência manual. O endereço impresso nos PDFs
+# redireciona atualmente para este domínio HTTPS.
+URL_CONFERENCIA_SEI_TRE_PE = (
+    "https://seiexterno.tre-pe.jus.br/sei/controlador_externo.php?"
+    "acao=documento_conferir&id_orgao_acesso_externo=0"
 )
 
 # Fundamento legal da assinatura eletrônica no serviço público
@@ -99,9 +101,7 @@ def extrair_codigos_autenticidade(texto: str) -> dict:
 
     verificador = RE_CODIGO_VERIFICADOR.search(norm)
     crc = RE_CODIGO_CRC.search(norm)
-    url = RE_URL_CONFERENCIA.search(norm)
-
-    url_conferencia = re.sub(r"\s+", "", url.group(1)) if url else None
+    url_conferencia = URL_CONFERENCIA_SEI_TRE_PE if verificador and crc else None
 
     return {
         "codigo_verificador": verificador.group(1) if verificador else None,

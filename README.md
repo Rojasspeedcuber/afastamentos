@@ -258,9 +258,15 @@ A aba **"Participação nas Eleições"** permite que o eleitor envie os documen
 1. **Upload** do documento comprobatório (Treinamento, 1º Turno ou 2º Turno).
 2. **Verificação de autenticidade:** o sistema confere a **assinatura**
    (digital embutida no PDF ou eletrônica textual no padrão SEI — Lei 11.419/2006)
-   e o **código de autenticidade** (código verificador + código CRC).
+   e o **código de autenticidade** (código verificador + código CRC). Quando os
+   códigos são identificados, a aplicação os exibe e disponibiliza um botão para
+   abrir o formulário HTTPS oficial do SEI/TRE-PE. O preenchimento dos códigos e
+   do CAPTCHA é feito manualmente no site oficial.
 3. **Somente documentos válidos** são armazenados e seguem para o cálculo.
    Documentos inválidos ou ausentes **não** contabilizam dias.
+
+A consulta externa é complementar: eventual indisponibilidade do site do SEI não
+interrompe a análise local do documento.
 
 ### Regra de cálculo dos dias ganhos
 

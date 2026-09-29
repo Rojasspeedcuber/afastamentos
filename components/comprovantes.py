@@ -108,6 +108,27 @@ def _render_detalhes_verificacao(detalhes: list[str], valido: bool) -> None:
             st.markdown(f"- {detalhe}")
 
 
+def _render_consulta_oficial(
+    codigo_verificador: str | None,
+    codigo_crc: str | None,
+    url_conferencia: str | None,
+) -> None:
+    """Exibe os dados necessários para a conferência manual no SEI."""
+    if not (codigo_verificador and codigo_crc and url_conferencia):
+        return
+
+    st.info(
+        "Confira também no site oficial do SEI/TRE-PE. "
+        f"Informe o código verificador **{codigo_verificador}**, o código CRC "
+        f"**{codigo_crc}** e o CAPTCHA solicitado pelo site."
+    )
+    st.link_button(
+        "Conferir autenticidade no SEI/TRE-PE",
+        url_conferencia,
+        type="primary",
+    )
+
+
 def _processar_upload(uploaded, tipo: int) -> None:
     """Valida, verifica a autenticidade e armazena o documento enviado."""
     cpf = st.session_state.get("cpf_usuario")
@@ -122,6 +143,12 @@ def _processar_upload(uploaded, tipo: int) -> None:
     # 2. Verificação de autenticidade (assinatura + código de autenticidade)
     with st.spinner("Verificando assinatura e código de autenticidade do documento..."):
         report = verify_pdf_authenticity(file_bytes, uploaded.name)
+
+    _render_consulta_oficial(
+        report.codigo_verificador,
+        report.codigo_crc,
+        report.url_conferencia,
+    )
 
     if not report.valido:
         st.error(
